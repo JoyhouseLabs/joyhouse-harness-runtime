@@ -2,7 +2,7 @@
 
 Joyhouse 自行维护的 DeepSeek Harness 运行时打包工程。只直接依赖官方 `@deepseek-ai/dsh@0.2.2-rc.1`；保留官方包的传递依赖，不修改 Harness 源码，不包含 Joyhouse 插件或个人数据。
 
-目标仓库：`https://github.com/JoyhouseLabs/joyhouse-harness-runtime`。本目录可独立检出运行；在产品仓库中暂存时也可运行测试。发布 workflow 位于本目录的 `.github/workflows/`，导出为独立仓库后生效。
+公开仓库：[JoyhouseLabs/joyhouse-harness-runtime](https://github.com/JoyhouseLabs/joyhouse-harness-runtime)。本目录可独立检出运行；在产品仓库中暂存时也可运行测试。发布 workflow 位于本目录的 `.github/workflows/`，导出为独立仓库后生效。
 
 ## 本地构建
 
@@ -27,12 +27,13 @@ node scripts/build.mjs
 
 桌面需要显式接纳 `runtime-release.json`，重建产品清单并完成兼容检查。打包仓库公开时可直接从 GitHub Release 下载；私有时需要自有分发服务，不能让客户端携带 GitHub 管理令牌。
 
-本目录的存在不表示四平台已构建、GitHub 仓库已建立或桌面下载源已切换。以实际 Actions 和产品 `upstream.json` 为准。
+运行包发行与桌面安装包发行相互独立。以实际 Actions 和产品 `upstream.json` 为准。
 
 ## 当前验证记录（2026-11-11）
 
 - 从 npm 官方 registry 独立生成锁文件，`npm ci` 安装 654 个包成功；直接运行官方 CLI 返回 `0.2.2-rc.1`。
 - 已审核五个依赖的安装脚本并锁定版本，FFI 加载与 PTY 实际执行测试通过。
 - 五项打包合同测试、五项桌面产品清单 Rust 测试通过。
-- 官方 `web` profile 启动在当前受限环境因 `listen EPERM` 失败；未绕过检查生成可发布的 ZIP。
-- 尚未建立远程独立仓库、运行四平台 CI 或发布自有安装包。仓库公开/私有选择尚待确认；桌面现有第三方发行 pin 保持原值。
+- 本地受限窗口的 Web 启动曾因 `listen EPERM` 失败；后续在四个平台的 GitHub 原生 runner 上，CLI、FFI、PTY 与认证 Web 启动测试全部通过。
+- 已发布 [四平台运行包](https://github.com/JoyhouseLabs/joyhouse-harness-runtime/releases/tag/dsh-0.2.2-rc.1-430095507731)（候选版），构建 commit `fc62f2288fc0599d8722febc905b91c47e12d403`。修复 Windows 探针进程退出及跨平台换行符差异后，完整发布流程通过。
+- 桌面产品清单已推进到该自有发行；运行包内仍保留兼容现有解压协议的 `deepseek-harness-pkg-*.zip` 文件名。
