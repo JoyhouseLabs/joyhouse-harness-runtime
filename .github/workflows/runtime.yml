@@ -1,0 +1,92 @@
+name: Build official Harness runtime
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a prerelease after all four native builds pass
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x64
+          - runner: macos-15
+            target: darwin-arm64
+          - runner: macos-15-intel
+            target: darwin-x64
+          - runner: windows-2025
+            target: win32-x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm install --global npm@11.19.0 --registry=https://registry.npmjs.org
+      - name: Check native platform
+        env:
+          EXPECTED_TARGET: ${{ matrix.target }}
+        run: node --input-type=module -e "import assert from 'node:assert/strict'; assert.equal(process.platform + '-' + process.arch, process.env.EXPECTED_TARGET)"
+      - run: node --test test/*.test.mjs
+      - run: node scripts/build.mjs
+        env:
+          RUNTIME_BUILD_COMMIT: ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: runtime-*
+          path: dist
+          merge-multiple: true
+      - run: node scripts/release.mjs
+        env:
+          RUNTIME_BUILD_COMMIT: ${{ github.sha }}
+          RUNTIME_BUILD_ID: ${{ github.run_id }}${{ github.run_attempt }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-release-manifest
+          path: |
+            dist/runtime-release.json
+            dist/SHA256SUMS
+      - name: Publish immutable prerelease
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          test "$GH_REPO" = 'JoyhouseLabs/joyhouse-harness-runtime'
+          tag=$(node -p "JSON.parse(require('fs').readFileSync('dist/runtime-release.json')).release.tag")
+          gh release create "$tag" dist/*.zip dist/*.zip.json dist/runtime-release.json dist/SHA256SUMS \
+            --target "$BUILD_COMMIT" --title "Joyhouse Harness runtime $tag" --prerelease \
+            --notes-file RELEASE-NOTES.md
