@@ -37,3 +37,12 @@ node scripts/build.mjs
 - 本地受限窗口的 Web 启动曾因 `listen EPERM` 失败；后续在四个平台的 GitHub 原生 runner 上，CLI、FFI、PTY 与认证 Web 启动测试全部通过。
 - 已发布 [四平台运行包](https://github.com/JoyhouseLabs/joyhouse-harness-runtime/releases/tag/dsh-0.2.2-rc.1-430095507731)（候选版），构建 commit `fc62f2288fc0599d8722febc905b91c47e12d403`。修复 Windows 探针进程退出及跨平台换行符差异后，完整发布流程通过。
 - 桌面产品清单已推进到该自有发行；运行包内仍保留兼容现有解压协议的 `deepseek-harness-pkg-*.zip` 文件名。
+
+### Explicit candidate tag release
+
+In addition to the manual workflow (`publish=true`), maintainers can push a
+`runtime-candidate-*` tag at a reviewed packaging commit. This explicitly requests
+four-platform qualification and prerelease publication. All four native builds,
+smoke tests and matching provenance reports remain mandatory. Ordinary branch
+pushes do not publish. The output release keeps its immutable run-based `dsh-*`
+tag; candidate tags must not be moved or reused.
